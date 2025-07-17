@@ -5,14 +5,15 @@ using namespace std;
 string text[100]={
 /*0-9*/		"[Q] 玩家档案","[A] 经典模式","[S] 趣味模式","[D] 无限模式","[F] 游戏设置","错误","该功能未开放","普  通  菜  单","人 类 数 量","电 脑 数 量",
 /*10-19*/	"电 脑 难 度","用 牌 套 数","[A] 返回主页","[S] 开始游戏","[D] 高级设置","随 机","简 单","普 通","困 难","高  级  菜  单",
-/*20-29*/	"玩 家","人 类","电 脑","[A] 普通设置","玩家总人数不能小于2或大于15","提示","若玩家之间出现空缺，将进行顺位调整\n是否开始游戏？","所需牌数超过可用牌数，是否使用额外牌组？\n此操作可能导致程序崩溃，否则提前结束牌局。","余牌","前牌",
+/*20-29*/	"玩 家","人 类","电 脑","[A] 普通设置","玩家总人数不能小于2或大于14","提示","若玩家之间出现空缺，将进行顺位调整\n是否开始游戏？","所需牌数超过可用牌数，是否使用额外牌组？\n此操作可能导致程序崩溃，否则提前结束牌局。","余牌","前牌",
 /*30-39*/	"顺序","红","黄","绿","蓝","黑","跳过","反转","+2","转色",
 /*40-49*/	"+4","顺时针","逆时针","余","张","第","页","共","页","抽牌",
 /*50-59*/	"UNO!","检举","出牌","抽了","张牌作起始牌，现在起始牌是","","玩家","抽了","张牌","所持牌数2张以内才可喊UNO",
-/*60-69*/	"检举出","位玩家没有喊UNO","所出的牌不符合要求","上一页","下一页","请选择颜色：[Q]红色  [W]黄色  [E]绿色  [R]蓝色","你抽到了 "," ，是否出牌？[Y/N]"};
-int optnum=0,optclass[4]={1,1,0,1},optadvan[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},optspe[1]={0},playertype[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0},computertype[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+/*60-69*/	"检举出","位玩家没有喊UNO","所出的牌不符合要求","上一页","下一页","请选择颜色：[Q]红色  [W]黄色  [E]绿色  [R]蓝色","你抽到了 "," ，是否出牌？[Y/N]","牌  局  结  算","难  度 ： ",
+/*70-79*/	"平  均  分 ： ","排名","玩家","原始分","赋分","积分","（电脑）","共  得  经  验 ： ","共  得  积  分 ： ","[S] 再来一局"};
+int optnum=0,optclass[4]={1,1,0,1},optadvan[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},optspe[1]={0},playertype[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0},robottype[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int notdealnum,notdealcard[2000],holdnum[14],holdcard[14][2000],playednum=0,playedcard[2000],rule[1]={0};bool UNO[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-int drawtype=0,drawnum=0,dealer,previous,page;bool clockwise;string message="";
+int drawtype=0,drawnum=0,dealer,previous,page,againtype;bool clockwise;string message="";
 void print(int times,int length,string left,char filling,string right,string middle,bool wrap)
 {
 	for(int a=0;a<times;a++)
@@ -81,8 +82,38 @@ string replace(int type,int input)
 		case 14:if(optnum-input==-1) return "■"; else return to_string(input%10);
 	}
 }
+void messageset(int type,int input1,int input2)
+{
+	switch(type)
+	{
+		case 1:message=text[53]+to_string(input1)+text[54]+replace(10,input2)+text[55];break;
+		case 2:message=text[56]+to_string((input1+1)/10)+to_string((input1+1)%10)+text[57]+to_string(input2)+text[58];break;
+		case 3:message=text[59];break;
+		case 4:message=text[60]+to_string(input1)+text[61];break;
+		case 5:message=text[62];break;
+		case 6:message=text[65];break;
+		case 7:message=text[66]+replace(10,input1)+text[67];
+	}
+}
+void next()
+{
+	do
+	{
+		dealer+=clockwise?1:-1;
+		dealer=(dealer+14)%14;
+	}while(playertype[dealer]==0);
+}
+void home_page();
+void general_menu(bool special);
+void advance_menu(bool special);
+void prepare(bool advance,bool special);
+void special_menu();
+void game(bool special);
+void discard(int playerID,int cardcode);
+void ending();
 void display()
 {
+	for(int a=0;a<14;a++) if(holdnum[a]==0&&playertype[a]!=0) ending();
 	for(int a=0;a<14;a++) if((holdnum[a]>2&&playertype[a]!=0)||playertype[a]==0) UNO[a]=0;
 	system("cls");
 	print(1,120,"+",'-',"+","",1);
@@ -116,35 +147,6 @@ void display()
 	print(1,120,"|",' ',"|","[Space]"+text[52],1);
 	print(1,120,"+",'-',"+","",0);
 }
-void messageset(int type,int input1,int input2)
-{
-	switch(type)
-	{
-		case 1:message=text[53]+to_string(input1)+text[54]+replace(10,input2)+text[55];break;
-		case 2:message=text[56]+to_string((input1+1)/10)+to_string((input1+1)%10)+text[57]+to_string(input2)+text[58];break;
-		case 3:message=text[59];break;
-		case 4:message=text[60]+to_string(input1)+text[61];break;
-		case 5:message=text[62];break;
-		case 6:message=text[65];break;
-		case 7:message=text[66]+replace(10,input1)+text[67];
-	}
-}
-void next()
-{
-	do
-	{
-		dealer+=clockwise?1:-1;
-		dealer=(dealer+14)%14;
-	}while(playertype[dealer]==0);
-}
-void home_page();
-void general_menu(bool special);
-void advance_menu(bool special);
-void prepare(bool advance,bool special);
-void special_menu();
-void dealing(int playerID,int dealnum);
-void game(bool special);
-void discard(int playerID,int cardcode);
 int main()
 {
 	srand(time(0));
@@ -212,7 +214,7 @@ void general_menu(bool special)
 			case -37:optclass[optnum]--;break;
 			case -39:optclass[optnum]++;break;
 			case 'A':return;break;
-			case 'S':prepare(0,special);break;
+			case 'S':againtype=0;prepare(0,special);break;
 			case 'D':optnum=0;advance_menu(special);break;
 		}
 	}
@@ -253,7 +255,7 @@ void advance_menu(bool special)
 			case -37:optadvan[optnum]--;break;
 			case -39:optadvan[optnum]++;break;
 			case 'A':optnum=0;return;break;
-			case 'S':prepare(1,special);break;
+			case 'S':againtype=1;prepare(1,special);break;
 		}
 	}
 }
@@ -273,51 +275,18 @@ void addcard(int time)
 	}
 	notdealnum+=108;
 }
-void prepare(bool advance,bool special)
+bool disdrawcard(int playerID,int cardcode)
 {
-	int cardset=1;
-	for(int a=0;a<14;a++) {playertype[a]=0;UNO[a]=0;}
-	if(advance==0)
+	messageset(7,cardcode,0);
+	display();
+	while(true)
 	{
-		if(optclass[0]+optclass[1]<2||optclass[0]+optclass[1]>15) {MessageBox(NULL,text[24].data(),text[25].data(),MB_OK|MB_ICONWARNING);return;}
-		int human=optclass[0],robot=optclass[1];
-		for(int a=0;a<optclass[0]+optclass[1];a++) if(rand()%(human+robot)<human) {playertype[a]=1,human--;} else {playertype[a]=2,robot--;}
-		cardset=optclass[3];
+		switch(keydetect())
+		{
+			case 'Y':return 1;break;
+			case 'N':return 0;break;
+		}
 	}
-	if(advance==1)
-	{
-		int zero=0;
-		for(int a=0;a<14;a++) if(optadvan[a]==0) zero++;
-		if(zero>12) {MessageBox(NULL,text[24].data(),text[25].data(),MB_OK|MB_ICONWARNING);return;}
-		for(int a=13;a>=0;a--) if(optadvan[a]!=0) if(zero+a!=13) {if(MessageBox(NULL,text[26].data(),text[25].data(),MB_YESNO|MB_ICONINFORMATION)==IDNO) return; else break;} else break;
-		for(int a=0;a<13;a++) for(int b=0;b<13;b++) if(optadvan[b]==0) {optadvan[b]=optadvan[b+1];optadvan[b+1]=0;}
-		for(int a=0;a<14;a++) playertype[a]=optadvan[a];
-		cardset=optadvan[15];
-	}
-	notdealnum=0;
-	for(int a=0;a<14;a++) holdnum[a]=0; playednum=0;
-	for(int a=0;a<2000;a++)
-	{
-		notdealcard[a]=999;playedcard[a]=999;
-		for(int b=0;b<14;b++) holdcard[b][a]=999;
-	}
-	if(special==1)
-	{
-		optspe[0]=1;
-		special_menu();
-	}
-	addcard(cardset);
-	for(int a=0;a<14;a++) if(playertype[a]!=0) dealing(a,7);
-	int startdraw=0;
-	do
-	{
-		int a=rand()%notdealnum;
-		previous=notdealcard[a];
-		notdealcard[a]=999;
-		notdealnum--;startdraw++;
-		messageset(1,startdraw,previous);
-	}while(previous/100==5||previous%100>9);
-	dealer=0;clockwise=1;page=0;optnum=0;drawtype=0;drawnum=0;game(special);
 }
 int changecolor()
 {
@@ -335,19 +304,6 @@ int changecolor()
 		}
 	}
 }
-bool disdrawcard(int playerID,int cardcode)
-{
-	messageset(7,cardcode,0);
-	display();
-	while(true)
-	{
-		switch(keydetect())
-		{
-			case 'Y':return 1;break;
-			case 'N':return 0;break;
-		}
-	}
-}
 void dealing(int playerID,int dealnum)
 {
 	if(dealnum>notdealnum)
@@ -356,7 +312,7 @@ void dealing(int playerID,int dealnum)
 		notdealnum+=playednum;playednum=0;
 		for(int a=0;a<2000;a++) playedcard[a]=999;
 		if(dealnum>notdealnum) if(MessageBox(NULL,text[27].data(),text[25].data(),MB_YESNO|MB_ICONWARNING)==IDYES) while(dealnum>notdealnum) addcard(1);
-		else;//进结算页面
+		else ending();
 	}
 	sort(notdealcard,notdealcard+2000);
 	if(dealnum==1)
@@ -395,6 +351,55 @@ void dealing(int playerID,int dealnum)
 	drawtype=0;drawnum=0;
 	next();
 }
+void prepare(bool advance,bool special)
+{
+	int cardset=1;
+	for(int a=0;a<14;a++) {playertype[a]=0;UNO[a]=0;}
+	if(advance==0)
+	{
+		if(optclass[0]+optclass[1]<2||optclass[0]+optclass[1]>14) {MessageBox(NULL,text[24].data(),text[25].data(),MB_OK|MB_ICONWARNING);return;}
+		int human=optclass[0],robot=optclass[1];
+		for(int a=0;a<optclass[0]+optclass[1];a++) if(rand()%(human+robot)<human) {playertype[a]=1,human--;} else {playertype[a]=2,robot--;}
+		cardset=optclass[3];
+		for(int a=0;a<14;a++) if(optclass[2]!=0) robottype[a]=optclass[2]; else robottype[a]=rand()%3+1;
+	}
+	if(advance==1)
+	{
+		int zero=0;
+		for(int a=0;a<14;a++) if(optadvan[a]==0) zero++;
+		if(zero>12) {MessageBox(NULL,text[24].data(),text[25].data(),MB_OK|MB_ICONWARNING);return;}
+		for(int a=13;a>=0;a--) if(optadvan[a]!=0) if(zero+a!=13) {if(MessageBox(NULL,text[26].data(),text[25].data(),MB_YESNO|MB_ICONINFORMATION)==IDNO) return; else break;} else break;
+		for(int a=0;a<13;a++) for(int b=0;b<13;b++) if(optadvan[b]==0) {optadvan[b]=optadvan[b+1];optadvan[b+1]=0;}
+		for(int a=0;a<14;a++) playertype[a]=optadvan[a];
+		cardset=optadvan[15];
+		for(int a=0;a<14;a++) if(optadvan[14]!=0) robottype[a]=optadvan[14]; else robottype[a]=rand()%3+1;
+	}
+	notdealnum=0;
+	for(int a=0;a<14;a++) holdnum[a]=0; playednum=0;
+	for(int a=0;a<2000;a++)
+	{
+		notdealcard[a]=999;playedcard[a]=999;
+		for(int b=0;b<14;b++) holdcard[b][a]=999;
+	}
+	if(special==1)
+	{
+		optspe[0]=1;
+		special_menu();
+	}
+	addcard(cardset);
+	for(int a=0;a<14;a++) if(playertype[a]!=0) dealing(a,7);
+	int startdraw=0;
+	do
+	{
+		if(notdealnum==0) if(MessageBox(NULL,text[27].data(),text[25].data(),MB_YESNO|MB_ICONWARNING)==IDYES) addcard(1); else ending();
+		int a=rand()%notdealnum;
+		previous=notdealcard[a];
+		notdealcard[a]=999;
+		notdealnum--;startdraw++;
+		messageset(1,startdraw,previous);
+	}while(previous/100==5||previous%100>9);
+	dealer=0;clockwise=1;page=0;optnum=0;drawtype=0;drawnum=0;game(special);
+}
 void game(bool special)
 {
 	while(true)
@@ -421,7 +426,7 @@ void game(bool special)
 			case '0':optnum=9;break;
 			case 'A':dealing(dealer,drawtype?drawnum:1);break;
 			case 'S':if(holdnum[dealer]<=2) UNO[dealer]=1; else messageset(3,0,0);break;
-			case 'D':{int b=0;for(int a=0;a<14;a++) if(playertype[a]!=0&&UNO[a]==0&&holdnum[a]<2){dealing(a,2);b++;} messageset(4,b,0);}break;
+			case 'D':{int b=0;for(int a=0;a<14;a++) if(playertype[a]!=0&&UNO[a]==0&&holdnum[a]<=2&&a!=dealer){dealing(a,2);b++;} messageset(4,b,0);}break;
 			case 32:discard(dealer,page*10+optnum);break;
 		}
 	}
@@ -456,4 +461,80 @@ void discard(int playerID,int cardcode)
 	}
 	else keepgoing=1;
 	if(!keepgoing) dealing(dealer,drawnum);
+}
+void ending()
+{
+	int valid=0,robot=0,totaldiffi=0;
+	for(int a=0;a<14;a++)
+	{
+		if(playertype[a]!=0)
+		{
+			valid++;
+			if(playertype[a]==2) {robot++;totaldiffi+=robottype[a];}
+		}
+	}
+	double avediffi=double(totaldiffi?totaldiffi:0)/double(robot?robot:1);
+	int rawscore[valid],tempscore[valid],rescore[valid],totalscore=0;
+	for(int a=0;a<valid;a++)
+	{
+		rawscore[a]=0,rescore[a]=0;
+		for(int b=0;b<holdnum[a];b++)
+		{
+			if(holdcard[a][b]%100<10) rawscore[a]-=holdcard[a][b]%100;
+			else if(holdcard[a][b]/100==5) rawscore[a]-=50;
+			else rawscore[a]-=20;
+		}
+		totalscore+=rawscore[a];
+		tempscore[a]=rawscore[a];
+	}
+	double avescore=double(totalscore)/double(valid);
+	sort(tempscore,tempscore+valid);
+	int temprank[valid],points[valid],EXP[valid],totalpoints,totalEXP;
+	for(int a=0;a<valid;a++)
+	{
+		temprank[a]=valid-a;
+		if(tempscore[a-1]==tempscore[a]) temprank[a-1]=temprank[a];
+		rescore[a]=round(rawscore[a]-avescore);
+		points[a]=round(rescore[a]*pow(robot,avediffi));
+		EXP[a]=round((rawscore[a]-tempscore[0])*totaldiffi);
+		if(playertype[a]==1) {totalpoints+=points[a];totalEXP+=EXP[a];}
+	}
+	while(true)
+	{
+		system("cls");
+		print(1,120,"+",'-',"+","",1);
+		print(1,120,"|",' ',"|","",1);
+		print(1,120,"|",' ',"|",text[68],1);
+		print(1,120,"|",' ',"|","",1);
+		print(1,60,"|",' ',"",text[69]+to_string(avediffi),0);print(1,60,"",' ',"|",text[70]+to_string(avescore),1);
+		print(1,120,"|",' ',"|","",1);
+		print(5,24,"+",'-',"+","",0);cout<<endl;
+		for(int a=0;a<5;a++) print(1,24,"|",' ',"|",text[71+a],0); cout<<endl;
+		print(5,24,"+",'-',"+","",0);cout<<endl;
+		bool showed[valid]={};
+		for(int a=valid-1;a>=0;a--)
+		{
+			for(int b=0;b<valid;b++) if(tempscore[a]==rawscore[b]&&!showed[b])
+			{
+				print(1,24,"|",' ',"|",to_string(temprank[a]),0);
+				print(1,24,"|",' ',"|",text[56]+to_string((b+1)/10)+to_string((b+1)%10)+(playertype[b]==2?text[76]:""),0);
+				print(1,24,"|",' ',"|",to_string(rawscore[b]),0);
+				print(1,24,"|",' ',"|",to_string(rescore[b]),0);
+				print(1,24,"|",' ',"|",to_string(points[b]),1);
+				showed[b]=1;
+			}
+		}
+		print(5,24,"+",'-',"+","",0);cout<<endl;
+		print(1,120,"|",' ',"|","",1);
+		print(1,60,"|",' ',"",text[77]+to_string(totalEXP),0);print(1,60,"",' ',"|",text[78]+to_string(totalpoints),1);
+		print(1,120,"|",' ',"|","",1);
+		print(1,60,"|",' ',"",text[12],0);print(1,60,"",' ',"|",text[79],1);
+		print(1,120,"|",' ',"|","",1);
+		print(1,120,"+",'-',"+","",1);
+		switch(keydetect())
+		{
+			case 'A':home_page();break;
+			case 'S':prepare(againtype,optspe[0]);break;
+		}
+	}
 }
