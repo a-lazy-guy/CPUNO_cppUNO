@@ -110,6 +110,7 @@ void prepare(bool advance,bool special);
 void special_menu();
 void game(bool special);
 void discard(int playerID,int cardcode);
+void robotdiscard();
 void ending();
 void display()
 {
@@ -406,6 +407,7 @@ void game(bool special)
 	{
 		display();
 		message="";
+		if(playertype[dealer]==2) robotdiscard();
 		switch(keydetect())
 		{
 			case -37:
@@ -461,6 +463,10 @@ void discard(int playerID,int cardcode)
 	}
 	else keepgoing=1;
 	if(!keepgoing) dealing(dealer,drawnum);
+}
+void robotdiscard()
+{
+	
 }
 void ending()
 {
