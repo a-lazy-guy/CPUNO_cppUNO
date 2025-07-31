@@ -10,10 +10,12 @@ string text[100]={
 /*40-49*/	"+4","顺时针","逆时针","余","张","第","页","共","页","抽牌",
 /*50-59*/	"UNO!","检举","出牌","抽了","张牌作起始牌，现在起始牌是","","玩家","抽了","张牌","所持牌数2张以内才可喊UNO",
 /*60-69*/	"检举出","位玩家没有喊UNO","所出的牌不符合要求","上一页","下一页","请选择颜色：[Q]红色  [W]黄色  [E]绿色  [R]蓝色","你抽到了 "," ，是否出牌？[Y/N]","牌  局  结  算","难  度 ： ",
-/*70-79*/	"平  均  分 ： ","排名","玩家","原始分","赋分","积分","（电脑）","共  得  经  验 ： ","共  得  积  分 ： ","[S] 再来一局"};
+/*70-79*/	"平  均  分 ： ","排名","玩家","原始分","赋分","积分","（电脑）","共  得  经  验 ： ","共  得  积  分 ： ","[S] 再来一局",
+/*80-89*/	"抽并出了一张牌"};
 int optnum=0,optclass[4]={1,1,0,1},optadvan[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},optspe[1]={0},playertype[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0},robottype[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int notdealnum,notdealcard[2000],holdnum[14],holdcard[14][2000],playednum=0,playedcard[2000],rule[1]={0};bool UNO[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int drawtype=0,drawnum=0,dealer,previous,page,againtype;bool clockwise;string message="";
+int lastcolor[14]={},misscolor[14]={};
 void print(int times,int length,string left,char filling,string right,string middle,bool wrap)
 {
 	for(int a=0;a<times;a++)
@@ -89,10 +91,11 @@ void messageset(int type,int input1,int input2)
 		case 1:message=text[53]+to_string(input1)+text[54]+replace(10,input2)+text[55];break;
 		case 2:message=text[56]+to_string((input1+1)/10)+to_string((input1+1)%10)+text[57]+to_string(input2)+text[58];break;
 		case 3:message=text[59];break;
-		case 4:message=text[60]+to_string(input1)+text[61];break;
+		case 4:if(!(playertype[dealer]==2&&input1==0)) message=text[60]+to_string(input1)+text[61];break;
 		case 5:message=text[62];break;
 		case 6:message=text[65];break;
-		case 7:message=text[66]+replace(10,input1)+text[67];
+		case 7:message=text[66]+replace(10,input1)+text[67];break;
+		case 8:message=text[56]+to_string((input1+1)/10)+to_string((input1+1)%10)+text[80];break;
 	}
 }
 void next()
@@ -102,6 +105,13 @@ void next()
 		dealer+=clockwise?1:-1;
 		dealer=(dealer+14)%14;
 	}while(playertype[dealer]==0);
+}
+bool judge(int cardcode)
+{
+	if(drawtype==0) if(cardcode/100==previous/100||cardcode%100==previous%100||cardcode/100==5) return 1;
+	if(drawtype==1) if(cardcode%100==12||cardcode==514) return 1;
+	if(drawtype==2) if(cardcode==514) return 1;
+	return 0;
 }
 void home_page();
 void general_menu(bool special);
@@ -274,39 +284,79 @@ void addcard(int time)
 		for(int b=0;b<3;b++) {notdealcard[notdealnum+25*a+2*b+19]=(a+1)*100+10+b;notdealcard[notdealnum+25*a+2*b+20]=(a+1)*100+10+b;}
 		for(int b=0;b<2;b++) {notdealcard[notdealnum+2*a+100]=513;notdealcard[notdealnum+2*a+101]=514;}
 	}
-	notdealnum+=108;
+	notdealnum+=108*time;
 }
 bool disdrawcard(int playerID,int cardcode)
 {
-	messageset(7,cardcode,0);
-	display();
-	while(true)
+	bool yes=-1;
+	if(playertype[playerID]==1)
 	{
-		switch(keydetect())
+		messageset(7,cardcode,0);
+		display();
+		while(true)
 		{
-			case 'Y':return 1;break;
-			case 'N':return 0;break;
+			switch(keydetect())
+			{
+				case 'Y':messageset(8,playerID,0);return 1;break;
+				case 'N':return 0;break;
+			}
 		}
+	}else
+	{
+		if(robottype[playerID]==1) if(rand()%2) yes=1; else yes=0;
+		if(robottype[playerID]==2) yes=1;
+		int nextone=dealer+clockwise?1:-1;
+		while(playertype[nextone]==0) nextone+=clockwise?1:-1;
+		if(robottype[playerID]==3) if(playertype[nextone]==1||UNO[playerID]) yes=1;
+		else if(playertype[nextone]==2&&UNO[nextone]&&cardcode%100<10&&cardcode/100==lastcolor[nextone]) yes=1;
+		else if(playertype[nextone]==2&&!UNO[nextone]) yes=1;
+		else yes=0;
 	}
+	if(yes) {lastcolor[playerID]=cardcode/100;messageset(8,playerID,0);return 1;} else return 0;
 }
 int changecolor()
 {
-	messageset(6,0,0);
-	display();
-	message="";
-	while(true)
+	misscolor[dealer]=previous/100;
+	if(playertype[dealer]==1)
 	{
-		switch(keydetect())
+		messageset(6,0,0);
+		display();
+		message="";
+		while(true)
 		{
-			case 'Q':return 1;
-			case 'W':return 2;
-			case 'E':return 3;
-			case 'R':return 4;
+			switch(keydetect())
+			{
+				case 'Q':return lastcolor[dealer]=1;
+				case 'W':return lastcolor[dealer]=2;
+				case 'E':return lastcolor[dealer]=3;
+				case 'R':return lastcolor[dealer]=4;
+			}
 		}
+	}
+	else
+	{
+		int raw[4]={},sorted[4]={},biggest;
+		for(int a=0;a<holdnum[dealer];a++)
+		{
+			int temp=holdcard[dealer][a];
+			if(temp/100<5) if(temp%100<10) raw[temp/100-1]+=temp%100;
+			else raw[temp/100-1]+=20;
+		}
+		for(int a=0;a<4;a++) sorted[a]=raw[a];
+		sort(sorted,sorted+4);
+		for(int a=0;a<4;a++) if(raw[a]==sorted[3]) {biggest=a+1;break;}
+		if(robottype[dealer]==1) return lastcolor[dealer]=rand()%4+1;
+		if(robottype[dealer]==2) return lastcolor[dealer]=biggest;
+		int nextone=dealer+clockwise?1:-1;
+		while(playertype[nextone]==0) nextone+=clockwise?1:-1;
+		if(robottype[dealer]==3) if(playertype[nextone]==1&&UNO[nextone]) return lastcolor[dealer]=misscolor[nextone];
+		else if(playertype[nextone]==2&&UNO[nextone]) return lastcolor[dealer]=lastcolor[nextone];
+		else return lastcolor[dealer]=biggest;
 	}
 }
 void dealing(int playerID,int dealnum)
 {
+	messageset(2,playerID,dealnum);
 	if(dealnum>notdealnum)
 	{
 		for(int a=0;a<playednum;a++) notdealcard[notdealnum+a]=playedcard[a];
@@ -323,9 +373,7 @@ void dealing(int playerID,int dealnum)
 		notdealnum--;notdealcard[temp]=999;
 		sort(notdealcard,notdealcard+2000);
 		bool valid=0;bool useit=0;
-		if(drawtype==0) if(tempcard/100==previous/100||tempcard%100==previous%100||tempcard/100==5) {valid=1;useit=disdrawcard(playerID,tempcard);}
-		if(drawtype==1) if(tempcard%100==12||tempcard==514) {valid=1;useit=disdrawcard(playerID,tempcard);}
-		if(drawtype==2) if(tempcard==514) {valid=1;useit=disdrawcard(playerID,tempcard);}
+		if(judge(tempcard)) {valid=1;useit=disdrawcard(playerID,tempcard);} else misscolor[playerID]=previous/100;
 		if(!valid||!useit) {holdcard[playerID][holdnum[playerID]]=tempcard;holdnum[playerID]++;}
 		if(useit)
 		{
@@ -348,7 +396,6 @@ void dealing(int playerID,int dealnum)
 		sort(notdealcard,notdealcard+2000);
 	}
 	sort(holdcard[playerID],holdcard[playerID]+2000);
-	messageset(2,playerID,dealnum);
 	drawtype=0;drawnum=0;
 	next();
 }
@@ -401,13 +448,19 @@ void prepare(bool advance,bool special)
 	}while(previous/100==5||previous%100>9);
 	dealer=0;clockwise=1;page=0;optnum=0;drawtype=0;drawnum=0;game(special);
 }
+void sue()
+{
+	int b=0;
+	for(int a=0;a<14;a++) if(playertype[a]!=0&&UNO[a]==0&&holdnum[a]<=2&&a!=dealer) {dealing(a,2);b++;}
+	messageset(4,b,0);
+}
 void game(bool special)
 {
 	while(true)
 	{
 		display();
 		message="";
-		if(playertype[dealer]==2) robotdiscard();
+		if(playertype[dealer]==2) {robotdiscard();continue;}
 		switch(keydetect())
 		{
 			case -37:
@@ -428,7 +481,7 @@ void game(bool special)
 			case '0':optnum=9;break;
 			case 'A':dealing(dealer,drawtype?drawnum:1);break;
 			case 'S':if(holdnum[dealer]<=2) UNO[dealer]=1; else messageset(3,0,0);break;
-			case 'D':{int b=0;for(int a=0;a<14;a++) if(playertype[a]!=0&&UNO[a]==0&&holdnum[a]<=2&&a!=dealer){dealing(a,2);b++;} messageset(4,b,0);}break;
+			case 'D':sue();break;
 			case 32:discard(dealer,page*10+optnum);break;
 		}
 	}
@@ -436,14 +489,13 @@ void game(bool special)
 void discard(int playerID,int cardcode)
 {
 	int card=holdcard[playerID][cardcode];
-	if(drawtype==0) if(card/100==previous/100||card%100==previous%100||card/100==5) ;else{messageset(5,0,0);return;}
-	if(drawtype==1) if(card%100==12||card==514) ;else{messageset(5,0,0);return;}
-	if(drawtype==2) if(card==514) ;else{messageset(5,0,0);return;}
+	if(judge(card)) ; else{messageset(5,0,0);return;}
 	if(card%100<10) ;
 	if(card%100==10) next();
 	if(card%100==11) clockwise=!clockwise;
 	if(card%100==12) {drawtype=1;drawnum+=2;}
 	previous=card;
+	lastcolor[playerID]=card/100;
 	if(card==513) {previous=changecolor()*100+98;}
 	if(card==514) {previous=changecolor()*100+98;drawtype=2;drawnum+=4;}
 	playedcard[playednum]=card;
@@ -466,7 +518,42 @@ void discard(int playerID,int cardcode)
 }
 void robotdiscard()
 {
-	
+	int diffi=robottype[dealer],validnum=0,validcode[holdnum[dealer]]={};
+	int sametype=-1,biggest=-1,special=-1,discode;
+	if(holdnum[dealer]<=2)
+	{
+		if(diffi==1) UNO[dealer]=rand()%2;
+		if(diffi==2) UNO[dealer]=rand()%10>1?1:0;
+		if(diffi==2) UNO[dealer]=rand()%100>1?1:0;
+	}
+	if(diffi==1) if(rand()%2) sue();
+	if(diffi==2) if(rand()%10>1) sue();
+	if(diffi==3) if(rand()%100>1) sue();
+	for(int a=0;a<holdnum[dealer];a++)
+	{
+		int tempcard=holdcard[dealer][a];
+		if(judge(tempcard))
+		{
+			validcode[validnum]=a;
+			if(tempcard%100==previous%100&&tempcard/100!=5) sametype=validnum;
+			if(biggest==-1) if(tempcard%100<10) biggest=validnum;
+			if(tempcard%100>holdcard[dealer][validcode[biggest]]&&tempcard%100<10) biggest=validnum;
+			if(tempcard%100>9) special=validnum;
+			validnum++;
+		}
+	}
+	int nextone=dealer+clockwise?1:-1;
+	while(playertype[nextone]==0) nextone+=clockwise?1:-1;
+	if(validnum==0) dealing(dealer,1);
+	else switch(diffi)
+	{
+		case 3:if(UNO[dealer]) ;else if(playertype[nextone]==1&&UNO[nextone]) {discode=special;break;}
+		else if(playertype[nextone]==2&&UNO[nextone]) if(special/100==5) {discode=special;break;} else {dealing(dealer,1);break;}
+		case 2:if(sametype!=-1) {discode=sametype;break;} else if(biggest!=-1) {discode=biggest;break;}
+		case 1:discode=rand()%validnum;break;
+	}
+	if(discode==-1) discode=rand()%validnum;
+	if(validnum!=0) discard(dealer,validcode[discode]);
 }
 void ending()
 {
@@ -495,7 +582,7 @@ void ending()
 	}
 	double avescore=double(totalscore)/double(valid);
 	sort(tempscore,tempscore+valid);
-	int temprank[valid],points[valid],EXP[valid],totalpoints,totalEXP;
+	int temprank[valid],points[valid],EXP[valid],totalpoints=0,totalEXP=0;
 	for(int a=0;a<valid;a++)
 	{
 		temprank[a]=valid-a;
