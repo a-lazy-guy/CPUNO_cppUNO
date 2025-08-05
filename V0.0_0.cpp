@@ -11,7 +11,7 @@ string text[100]={
 /*50-59*/	"UNO!","检举","出牌","抽了","张牌作起始牌，现在起始牌是","","玩家","抽了","张牌","所持牌数2张以内才可喊UNO",
 /*60-69*/	"检举出","位玩家没有喊UNO","所出的牌不符合要求","上一页","下一页","请选择颜色：[Q]红色  [W]黄色  [E]绿色  [R]蓝色","你抽到了 "," ，是否出牌？[Y/N]","牌  局  结  算","难  度 ： ",
 /*70-79*/	"平  均  分 ： ","排名","玩家","原始分","赋分","积分","（电脑）","共  得  经  验 ： ","共  得  积  分 ： ","[S] 再来一局",
-/*80-89*/	"抽并出了一张牌"};
+/*80-89*/	"抽并出了一张牌","[ESC] 暂停游戏","[D] 继续游戏"};
 int optnum=0,optclass[4]={1,1,0,1},optadvan[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},optspe[1]={0},playertype[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0},robottype[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int notdealnum,notdealcard[2000],holdnum[14],holdcard[14][2000],playednum=0,playedcard[2000],rule[1]={0};bool UNO[14]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 int drawtype=0,drawnum=0,dealer,previous,page,againtype;bool clockwise;string message="";
@@ -119,6 +119,7 @@ void advance_menu(bool special);
 void prepare(bool advance,bool special);
 void special_menu();
 void game(bool special);
+void pause();
 void discard(int playerID,int cardcode);
 void robotdiscard();
 void ending();
@@ -127,7 +128,7 @@ void display()
 	for(int a=0;a<14;a++) if(holdnum[a]==0&&playertype[a]!=0) ending();
 	for(int a=0;a<14;a++) if((holdnum[a]>2&&playertype[a]!=0)||playertype[a]==0) UNO[a]=0;
 	system("cls");
-	print(1,120,"+",'-',"+","",1);
+	print(1,120,"+-"+text[81],'-',"+","",1);
 	print(1,120,"|",' ',"|","",1);
 	cout<<"|  ";print(6,19,"  /",'-',"\\  ","",0);cout<<"  |"<<endl;
 	cout<<"|  ";for(int a=0;a<6;a++) print(1,19,"  |"+replace(1,dealer-a),' ',text[20]+"0"+to_string(a+1)+"|  ","",0); cout<<"  |"<<endl;
@@ -451,16 +452,16 @@ void prepare(bool advance,bool special)
 void sue()
 {
 	int b=0;
-	for(int a=0;a<14;a++) if(playertype[a]!=0&&UNO[a]==0&&holdnum[a]<=2&&a!=dealer) {dealing(a,2);b++;}
+	for(int a=0;a<14;a++) if(playertype[a]!=0&&UNO[a]==0&&holdnum[a]<2&&a!=dealer) {dealing(a,2);b++;}
 	messageset(4,b,0);
 }
 void game(bool special)
 {
 	while(true)
 	{
-		display();
-		message="";
-		if(playertype[dealer]==2) {robotdiscard();continue;}
+		if(drawnum!=0) message=message+" (+"+to_string(drawnum)+")";
+		if(playertype[dealer]==1) display();message="";
+		if(playertype[dealer]==2) {robotdiscard();display();Sleep(500);continue;}
 		switch(keydetect())
 		{
 			case -37:
@@ -483,6 +484,7 @@ void game(bool special)
 			case 'S':if(holdnum[dealer]<=2) UNO[dealer]=1; else messageset(3,0,0);break;
 			case 'D':sue();break;
 			case 32:discard(dealer,page*10+optnum);break;
+			case 27:pause();break;
 		}
 	}
 }
@@ -509,7 +511,7 @@ void discard(int playerID,int cardcode)
 	{
 		for(int a=0;a<holdnum[dealer];a++)
 		{
-			if(drawtype==1&&(holdcard[dealer][a]%100==12||holdcard[dealer][a]/100==5)) keepgoing=1;
+			if(drawtype==1&&(holdcard[dealer][a]%100==12||holdcard[dealer][a]==514)) keepgoing=1;
 			if(drawtype==2&&holdcard[dealer][a]==514) keepgoing=1;
 		}
 	}
@@ -549,7 +551,7 @@ void robotdiscard()
 	{
 		case 3:if(UNO[dealer]) ;else if(playertype[nextone]==1&&UNO[nextone]) {discode=special;break;}
 		else if(playertype[nextone]==2&&UNO[nextone]) if(special/100==5) {discode=special;break;} else {dealing(dealer,1);break;}
-		case 2:if(sametype!=-1) {discode=sametype;break;} else if(biggest!=-1) {discode=biggest;break;}
+		case 2:if(biggest!=-1) {discode=biggest;break;} else if(sametype!=-1) {discode=sametype;break;}
 		case 1:discode=rand()%validnum;break;
 	}
 	if(discode==-1) discode=rand()%validnum;
@@ -628,6 +630,34 @@ void ending()
 		{
 			case 'A':home_page();break;
 			case 'S':prepare(againtype,optspe[0]);break;
+		}
+	}
+}
+void pause()
+{
+	system("cls");
+	print(1,120,"+",'-',"+","",1);
+	print(4,120,"|",' ',"|","",1);
+	print(1,120,"|",' ',"|","PPPP        A       U   U      SSSS     EEEEE",1);
+	print(1,120,"|",' ',"|","P   P      A A      U   U     S         E    ",1);
+	print(1,120,"|",' ',"|","PPPP      A   A     U   U      SSS      EEEEE",1);
+	print(1,120,"|",' ',"|","P         AAAAA     U   U         S     E    ",1);
+	print(1,120,"|",' ',"|","P         A   A      UUU      SSSS      EEEEE",1);
+	print(4,120,"|",' ',"|","",1);
+	print(1,120,"|",' ',"|",text[12],1);
+	print(4,120,"|",' ',"|","",1);
+	print(1,120,"|",' ',"|",text[79],1);
+	print(4,120,"|",' ',"|","",1);
+	print(1,120,"|",' ',"|",text[82],1);
+	print(4,120,"|",' ',"|","",1);
+	print(1,120,"+",'-',"+","",1);
+	while(true)
+	{
+		switch(keydetect())
+		{
+			case 'A':home_page();break;
+			case 'S':prepare(againtype,optspe[0]);break;
+			case 'D':return ;
 		}
 	}
 }
