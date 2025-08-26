@@ -116,6 +116,7 @@ bool judge(int cardcode)
 void home_page();
 void general_menu(bool special);
 void advance_menu(bool special);
+void archivemanege();
 void prepare(bool advance,bool special);
 void special_menu();
 void game(bool special);
@@ -660,4 +661,8 @@ void pause()
 			case 'D':return ;
 		}
 	}
+}
+void archivemanage()
+{
+
 }
